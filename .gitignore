@@ -1,0 +1,17 @@
+.idea/
+.vscode/
+*.swp
+*.swo
+
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+.venv/
+
+node_modules/
+dist/
+dist-ssr/
+*.local

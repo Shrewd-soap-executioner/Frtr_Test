@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+asyncpg
+celery
+redis
+passlib
+bcrypt==3.2.2
+websockets
+pydantic[email]
+pytest
+httpx
