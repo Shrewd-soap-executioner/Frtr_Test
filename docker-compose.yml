@@ -52,5 +52,17 @@ services:
       - backend
       - redis
 
+  frontend:
+    build: ./front_stage
+    container_name: proxy_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./front_stage:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:

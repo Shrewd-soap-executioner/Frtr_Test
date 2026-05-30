@@ -29,16 +29,16 @@ async def lifespan(app: FastAPI):
         if not result.scalar_one_or_none():
             print("Создаю тестовые виртуальные машины в базе...")
             session.add_all([
-                VirtualMachine(name="Proxy-Server-Frankfurt", host="192.168.1.10", port=8080, protocol="http"),
-                VirtualMachine(name="Proxy-Server-London", host="192.168.1.11", port=1080, protocol="socks5"),
-                VirtualMachine(name="Proxy-Server-Amsterdam", host="192.168.1.12", port=3128, protocol="http")
+                VirtualMachine(name="FRTR-Server-Frankfurt", host="192.168.1.10", port=8080, protocol="http"),
+                VirtualMachine(name="FRTR-Server-London", host="192.168.1.11", port=1080, protocol="socks5"),
+                VirtualMachine(name="FRTR-Server-Amsterdam", host="192.168.1.12", port=3128, protocol="http")
             ])
             await session.commit()
     yield
     await engine.dispose()
 
 app = FastAPI(
-    title="Proxy Access API",
+    title="FRTR Access API",
     description="API для управления прокси-серверами через десктопный клиент.",
     version="1.0.0",
     openapi_tags=tags_metadata,
