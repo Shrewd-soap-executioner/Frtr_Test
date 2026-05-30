@@ -9,10 +9,12 @@ class NetworkWorker(QThread):
     success_signal = pyqtSignal(dict)
     error_signal = pyqtSignal(str)
 
+  
     def __init__(self, key):
         super().__init__()
         self.key = key
 
+  
     def run(self):
         try:
             url = "http://localhost:8000/api/activate-key"
@@ -31,6 +33,8 @@ class NetworkWorker(QThread):
 
 
 class ClientWindow(QWidget):
+
+  
     def __init__(self):
         super().__init__()
         self.current_session_key = None
@@ -63,6 +67,7 @@ class ClientWindow(QWidget):
 
         self.setLayout(layout)
 
+  
     def start_connection(self):
         key = self.key_input.text().strip()
         if len(key) != 32:
@@ -77,6 +82,7 @@ class ClientWindow(QWidget):
         self.worker.error_signal.connect(self.on_error)
         self.worker.start()
 
+  
     def on_success(self, data):
         self.connect_btn.setEnabled(True)
         self.current_session_key = data.get("new_key")
@@ -85,14 +91,17 @@ class ClientWindow(QWidget):
         ip = data.get("vm_ip", "0.0.0.0")
         self.show_status(f"Успешно выдана ВМ: {vm_name}\nIP: {ip}", "green")
 
+  
     def on_error(self, error_msg):
         self.connect_btn.setEnabled(True)
         self.show_status(f"Отказ: {error_msg}", "red")
 
+  
     def show_status(self, text, color):
         self.status_label.setText(text)
         self.status_label.setStyleSheet(f"margin-top: 15px; font-weight: bold; color: {color};")
 
+  
     def closeEvent(self, event):
         if hasattr(self, 'current_session_key') and self.current_session_key:
             try:
