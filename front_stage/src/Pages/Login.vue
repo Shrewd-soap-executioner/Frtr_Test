@@ -1,5 +1,5 @@
 <template>
-  <v-container class="mt-10" style="max-width: 500px;">
+  <v-container class="mt-10 mx-auto" max-width="500">
     <v-card class="pa-6" elevation="3">
       <v-card-title class="text-h5 text-center font-weight-bold text-primary mb-4">Вход в кабинет</v-card-title>
 
@@ -32,9 +32,10 @@ const isLoading = ref(false);
 const handleLogin = async () => {
   isLoading.value = true;
   errorMessage.value = '';
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   try {
-    const response = await fetch('http://localhost:8000/login', {
+    const response = await fetch(`${apiUrl}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, password: password.value })

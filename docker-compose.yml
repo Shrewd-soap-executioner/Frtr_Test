@@ -43,8 +43,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://myuser:mypassword@db:5432/proxy_db
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - SMTP_USER=sashsem11@gmail.com
-      - SMTP_PASSWORD=botpsbmxhbtubsav
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=465
     command: celery -A tasks worker --loglevel=info
@@ -57,6 +57,8 @@ services:
     container_name: proxy_frontend
     ports:
       - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
     volumes:
       - ./front_stage:/app
       - /app/node_modules

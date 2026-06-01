@@ -1,5 +1,5 @@
 <template>
-  <v-container class="mt-10" style="max-width: 900px;">
+  <v-container class="mt-10 mx-auto" max-width="900">
 
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" location="top" timeout="3000">
       {{ snackbar.text }}
@@ -181,7 +181,9 @@ onUnmounted(() => {
 });
 
 const initWebSocket = () => {
-  wsConnection = new WebSocket(`ws://localhost:8000/ws/connection-status/${userId.value}`);
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const wsUrl = baseUrl.replace(/^http/, 'ws');
+  wsConnection = new WebSocket(`${wsUrl}/ws/connection-status/${userId.value}?token=${activationKey.value}`);
 
   wsConnection.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -219,9 +221,10 @@ const copyToClipboard = () => {
 
 const handleRegenerateKey = async () => {
   isKeyLoading.value = true;
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   try {
-    const response = await fetch(`http://localhost:8000/users/${userId.value}/regenerate-key`, {
-      method: 'POST'
+    const response = await fetch(`${apiUrl}/users/${userId.value}/regenerate-key`, {
+      method: 'PATCH'
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || 'Не удалось обновить ключ');
@@ -241,9 +244,10 @@ const handleRegenerateKey = async () => {
 
 const handleChangePassword = async () => {
   isPassLoading.value = true;
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   try {
-    const response = await fetch(`http://localhost:8000/users/${userId.value}/change-password`, {
-      method: 'POST',
+    const response = await fetch(`${apiUrl}/users/${userId.value}/change-password`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ old_password: oldPassword.value, new_password: newPassword.value })
     });

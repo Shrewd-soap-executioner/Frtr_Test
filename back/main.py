@@ -1,6 +1,6 @@
 import secrets
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,6 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -76,8 +75,17 @@ class DesktopConnectSchema(BaseModel):
     activation_key: str
 
 @app.websocket("/ws/connection-status/{user_id}")
-async def websocket_profile(websocket: WebSocket, user_id: int):
+async def websocket_profile(websocket: WebSocket, user_id: int, token: str = Query(...)):
     await websocket.accept()
+    
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.id == user_id, User.activation_key == token))
+        user = result.scalar_one_or_none()
+        
+    if not user:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+        
     active_connections[user_id] = websocket
     try:
         while True:
@@ -123,7 +131,7 @@ async def login(data: UserLoginSchema, db: AsyncSession = Depends(get_db)):
 
     return {"id": user.id, "email": user.email, "activation_key": user.activation_key}
 
-@app.post(
+@app.patch(
     "/users/{user_id}/regenerate-key",
     tags=["Пользователи"],
     summary="Перевыпуск ключа доступа"
@@ -134,6 +142,17 @@ async def regenerate_key(user_id: int, db: AsyncSession = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
+    # Принудительно освобождаем ВМ при сбросе ключа (сброс сессии)
+    vm_res = await db.execute(select(VirtualMachine).where(VirtualMachine.current_user_id == user.id))
+    vm = vm_res.scalar_one_or_none()
+    if vm:
+        vm.current_user_id = None
+        if user.id in active_connections:
+            try:
+                await active_connections[user.id].send_json({"status": "disconnected"})
+            except Exception:
+                pass
+
     new_key = secrets.token_hex(16)
     user.activation_key = new_key
     await db.commit()
@@ -141,7 +160,7 @@ async def regenerate_key(user_id: int, db: AsyncSession = Depends(get_db)):
     send_email_task.delay(user.email, new_key)
     return {"activation_key": new_key}
 
-@app.post(
+@app.patch(
     "/users/{user_id}/change-password",
     tags=["Пользователи"],
     summary="Смена пароля"
@@ -177,14 +196,18 @@ async def desktop_connect(data: DesktopConnectSchema, db: AsyncSession = Depends
     vm_res = await db.execute(select(VirtualMachine).where(VirtualMachine.current_user_id == user.id))
     vm = vm_res.scalar_one_or_none()
 
+    if vm:
+        raise HTTPException(status_code=400, detail="Сессия уже активна. Отключитесь или сбросьте ключ в профиле.")
+
+    free_vm_res = await db.execute(select(VirtualMachine).where(
+        VirtualMachine.current_user_id.is_(None)
+    ).limit(1))
+    vm = free_vm_res.scalar_one_or_none()
+
     if not vm:
-        free_vm_res = await db.execute(select(VirtualMachine).where(VirtualMachine.current_user_id == None).limit(1))
-        vm = free_vm_res.scalar_one_or_none()
+        raise HTTPException(status_code=503, detail="Нет свободных серверов. Попробуйте позже.")
 
-        if not vm:
-            raise HTTPException(status_code=503, detail="Нет свободных серверов. Попробуйте позже.")
-
-        vm.current_user_id = user.id
+    vm.current_user_id = user.id
 
     user.activation_key = secrets.token_hex(16)
     await db.commit()
@@ -212,13 +235,13 @@ async def desktop_connect(data: DesktopConnectSchema, db: AsyncSession = Depends
         "new_key": user.activation_key
     }
 
-@app.post(
-    "/api/disconnect",
+@app.delete(
+    "/api/activate-key/{activation_key}",
     tags=["Десктоп"],
     summary="Отключение десктопа и освобождение ВМ"
 )
-async def desktop_disconnect(data: DesktopConnectSchema, db: AsyncSession = Depends(get_db)):
-    user_res = await db.execute(select(User).where(User.activation_key == data.activation_key))
+async def desktop_disconnect(activation_key: str, db: AsyncSession = Depends(get_db)):
+    user_res = await db.execute(select(User).where(User.activation_key == activation_key))
     user = user_res.scalar_one_or_none()
 
     if not user:

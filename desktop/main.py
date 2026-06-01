@@ -1,23 +1,23 @@
 import sys
+import os
 import requests
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout,
                              QLabel, QLineEdit, QPushButton)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 class NetworkWorker(QThread):
     success_signal = pyqtSignal(dict)
     error_signal = pyqtSignal(str)
 
-  
     def __init__(self, key):
         super().__init__()
         self.key = key
 
-  
     def run(self):
         try:
-            url = "http://localhost:8000/api/activate-key"
+            url = f"{API_BASE_URL}/api/activate-key"
             response = requests.post(url, json={"activation_key": self.key}, timeout=5)
             data = response.json()
 
@@ -34,12 +34,11 @@ class NetworkWorker(QThread):
 
 class ClientWindow(QWidget):
 
-  
     def __init__(self):
         super().__init__()
         self.current_session_key = None
         self.setWindowTitle("Proxy Access Client")
-        self.setFixedSize(400, 250)
+        self.setFixedSize(600, 250)
 
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -67,7 +66,6 @@ class ClientWindow(QWidget):
 
         self.setLayout(layout)
 
-  
     def start_connection(self):
         key = self.key_input.text().strip()
         if len(key) != 32:
@@ -82,7 +80,6 @@ class ClientWindow(QWidget):
         self.worker.error_signal.connect(self.on_error)
         self.worker.start()
 
-  
     def on_success(self, data):
         self.connect_btn.setEnabled(True)
         self.current_session_key = data.get("new_key")
@@ -91,27 +88,23 @@ class ClientWindow(QWidget):
         ip = data.get("vm_ip", "0.0.0.0")
         self.show_status(f"Успешно выдана ВМ: {vm_name}\nIP: {ip}", "green")
 
-  
     def on_error(self, error_msg):
         self.connect_btn.setEnabled(True)
         self.show_status(f"Отказ: {error_msg}", "red")
 
-  
     def show_status(self, text, color):
         self.status_label.setText(text)
         self.status_label.setStyleSheet(f"margin-top: 15px; font-weight: bold; color: {color};")
 
-  
     def closeEvent(self, event):
         if hasattr(self, 'current_session_key') and self.current_session_key:
             try:
-                requests.post(
-                    "http://localhost:8000/api/disconnect",
-                    json={"activation_key": self.current_session_key},
+                requests.delete(
+                    f"{API_BASE_URL}/api/activate-key/{self.current_session_key}",
                     timeout=2
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Ошибка при отключении на сервере: {e}")
         event.accept()
 
 

@@ -1,5 +1,5 @@
 <template>
-  <v-container class="mt-10" style="max-width: 500px;">
+  <v-container class="mt-10 mx-auto" max-width="500">
 
     <v-snackbar v-model="showPopup" color="success" location="top" timeout="5000">
       <v-icon icon="mdi-email-check" class="mr-2"></v-icon>
@@ -82,9 +82,10 @@ const handleRegister = async () => {
 
   isLoading.value = true;
   errorMessage.value = '';
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   try {
-    const response = await fetch('http://localhost:8000/register', {
+    const response = await fetch(`${apiUrl}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

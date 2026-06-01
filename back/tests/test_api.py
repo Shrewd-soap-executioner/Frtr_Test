@@ -36,6 +36,23 @@ async def test_register_user(ac: AsyncClient):
     assert data["message"] == "Регистрация успешна!"
 
 
+async def test_register_existing_email(ac: AsyncClient):
+    test_email = f"test_{uuid.uuid4().hex[:6]}@duplicate.com"
+    payload = {
+        "email": test_email,
+        "password": "password123",
+        "password_confirm": "password123"
+    }
+
+    # Первая регистрация
+    await ac.post("/register", json=payload)
+
+    # Вторая попытка с тем же email
+    response = await ac.post("/register", json=payload)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Пользователь с таким email уже существует"
+
+
 async def test_register_password_mismatch(ac: AsyncClient):
     test_email = f"test_{uuid.uuid4().hex[:6]}@mismatch.com"
 
@@ -96,7 +113,7 @@ async def test_regenerate_key(ac: AsyncClient):
     user_id = login_resp.json()["id"]
     old_key = login_resp.json()["activation_key"]
 
-    regen_resp = await ac.post(f"/users/{user_id}/regenerate-key")
+    regen_resp = await ac.patch(f"/users/{user_id}/regenerate-key")
     assert regen_resp.status_code == 200
 
     new_key = regen_resp.json()["activation_key"]
@@ -112,7 +129,7 @@ async def test_change_password(ac: AsyncClient):
     login_resp = await ac.post("/login", json={"email": test_email, "password": old_pass})
     user_id = login_resp.json()["id"]
 
-    change_resp = await ac.post(
+    change_resp = await ac.patch(
         f"/users/{user_id}/change-password",
         json={"old_password": old_pass, "new_password": new_pass}
     )
@@ -142,6 +159,6 @@ async def test_desktop_flow_and_single_use_key(ac: AsyncClient):
     assert spam_resp.status_code == 401
     assert "Неверный или уже использованный ключ" in spam_resp.json()["detail"]
 
-    disconnect_resp = await ac.post("/api/disconnect", json={"activation_key": new_key})
+    disconnect_resp = await ac.delete(f"/api/activate-key/{new_key}")
     assert disconnect_resp.status_code == 200
     assert disconnect_resp.json()["message"] == "Успешно отключено"
