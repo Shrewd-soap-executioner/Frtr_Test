@@ -40,4 +40,7 @@ docker exec -it proxy_backend pytest
 ## Пример открытого сайта
 <p align="center">
   <img src="Images/log.png" alt="Verilog Computer architecture diagram" width="900">
+  <img src="Images/Reg.png" alt="Verilog Computer architecture diagram" width="900">
+  <img src="Images/profile.png" alt="Verilog Computer architecture diagram" width="900">
+  <img src="Images/Auth.png" alt="Verilog Computer architecture diagram" width="900">
 </p>
