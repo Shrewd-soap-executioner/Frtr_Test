@@ -37,3 +37,7 @@ docker-compose up -d --build
 ```bash
 docker exec -it proxy_backend pytest
 ```
+## Пример открытого сайта
+<p align="center">
+  <img src="docs/images/architecture.png" alt="Verilog Computer architecture diagram" width="900">
+</p>
