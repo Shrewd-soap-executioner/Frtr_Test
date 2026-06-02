@@ -142,7 +142,6 @@ async def regenerate_key(user_id: int, db: AsyncSession = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    # Принудительно освобождаем ВМ при сбросе ключа (сброс сессии)
     vm_res = await db.execute(select(VirtualMachine).where(VirtualMachine.current_user_id == user.id))
     vm = vm_res.scalar_one_or_none()
     if vm:
