@@ -44,10 +44,8 @@ async def test_register_existing_email(ac: AsyncClient):
         "password_confirm": "password123"
     }
 
-    # Первая регистрация
     await ac.post("/register", json=payload)
 
-    # Вторая попытка с тем же email
     response = await ac.post("/register", json=payload)
     assert response.status_code == 400
     assert response.json()["detail"] == "Пользователь с таким email уже существует"
